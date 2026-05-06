@@ -6,6 +6,7 @@ import { markLeadPaid, sendStripeCheckout } from './actions';
 export function LeadActionsCell({ leadId, status }: { leadId: string; status: string }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
+  const [emailWarning, setEmailWarning] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const router = useRouter();
@@ -14,11 +15,24 @@ export function LeadActionsCell({ leadId, status }: { leadId: string; status: st
     start(async () => {
       setMsg('Creating Stripe session…');
       setCheckoutUrl(null);
+      setEmailWarning(null);
       const res = await sendStripeCheckout(leadId);
-      setMsg(res.message);
+
+      // Detect Resend free-tier 403 — email send fails but URL is still good.
+      const failed403 = res.message.includes('resend_403') || res.message.includes('email failed');
       if (res.ok && res.checkoutUrl) {
         setCheckoutUrl(res.checkoutUrl);
+        if (failed403) {
+          setMsg('✓ Stripe link ready');
+          setEmailWarning(
+            'Email blocked by Resend free tier (only sends to your signup email). Copy the URL below and share it directly.',
+          );
+        } else {
+          setMsg(res.message);
+        }
         router.refresh();
+      } else {
+        setMsg(res.message);
       }
     });
 
@@ -37,16 +51,15 @@ export function LeadActionsCell({ leadId, status }: { leadId: string; status: st
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // clipboard may be blocked in iframe — user can still click the link
+      // clipboard may be blocked — user can still click the link
     }
   };
 
-  // Decide which buttons to show based on lead status
   const canSendLink = ['new', 'verified', 'emailed', 'registered', 'attended'].includes(status);
   const canMarkPaid = ['offered', 'attended'].includes(status);
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="flex flex-col items-end gap-1.5">
       <div className="flex flex-wrap items-center justify-end gap-1">
         {canSendLink && (
           <button
@@ -72,23 +85,48 @@ export function LeadActionsCell({ leadId, status }: { leadId: string; status: st
           <span className="text-[11px] text-neutral-400">{status === 'paid' ? '✓ paid' : '—'}</span>
         )}
       </div>
-      {msg && <span className="max-w-[260px] text-right text-[10px] text-neutral-500">{msg}</span>}
+
+      {msg && <span className="max-w-[280px] text-right text-[10px] text-neutral-500">{msg}</span>}
+
       {checkoutUrl && (
-        <div className="mt-1 flex items-center gap-1.5">
+        <div className="flex w-full max-w-[320px] flex-col items-end gap-1.5 rounded-md border border-neutral-200 bg-neutral-50 p-2 dark:border-neutral-800 dark:bg-neutral-900">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+            Stripe checkout URL
+          </p>
+          <code className="block w-full max-w-full overflow-x-auto rounded border border-neutral-200 bg-white px-1.5 py-1 text-left text-[9px] text-neutral-600 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-400">
+            {checkoutUrl.slice(0, 60)}…
+          </code>
+          <div className="flex items-center gap-1.5">
+            <a
+              href={checkoutUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md border border-neutral-300 bg-white px-2 py-0.5 text-[10px] font-medium hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-950 dark:hover:bg-neutral-900"
+            >
+              Open ↗
+            </a>
+            <button
+              onClick={copy}
+              className="rounded-md border border-neutral-300 bg-white px-2 py-0.5 text-[10px] font-medium hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-950 dark:hover:bg-neutral-900"
+            >
+              {copied ? '✓ Copied' : 'Copy URL'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {emailWarning && (
+        <div className="max-w-[320px] rounded-md border border-amber-300 bg-amber-50 p-2 text-left text-[10px] text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300">
+          ⚠ {emailWarning}{' '}
           <a
-            href={checkoutUrl}
+            href="https://resend.com/domains"
             target="_blank"
             rel="noreferrer"
-            className="rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-[10px] font-mono text-neutral-700 underline hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300"
+            className="underline"
           >
-            Open checkout ↗
-          </a>
-          <button
-            onClick={copy}
-            className="rounded border border-neutral-300 bg-white px-1.5 py-0.5 text-[10px] font-medium hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900"
-          >
-            {copied ? '✓ copied' : 'Copy URL'}
-          </button>
+            Verify a domain
+          </a>{' '}
+          to send to anyone.
         </div>
       )}
     </div>

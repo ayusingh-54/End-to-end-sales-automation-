@@ -10,12 +10,15 @@ const Input = z.object({
   password: z.string().min(1),
 });
 
+// Optional allow-list. If ADMIN_ALLOWED_EMAILS is set, only listed emails can
+// sign in. If unset (the demo default), any user that exists in Supabase Auth
+// can sign in — RLS still gates what they can see (need user_roles entry).
 function isAllowed(email: string): boolean {
   const list = (process.env.ADMIN_ALLOWED_EMAILS ?? '')
     .split(',')
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
-  if (list.length === 0) return email.toLowerCase().endsWith('@learnwithleaders.com');
+  if (list.length === 0) return true; // no allow-list configured → open to any Supabase user
   return list.includes(email.toLowerCase());
 }
 
@@ -25,9 +28,11 @@ export async function signIn(form: FormData): Promise<{ message: string }> {
     return { message: 'Too many attempts — try again shortly.' };
   }
   const parsed = Input.safeParse(Object.fromEntries(form));
-  if (!parsed.success) return { message: 'Email and password are required.' };
+  if (!parsed.success) return { message: 'Please enter a valid email and password.' };
   if (!isAllowed(parsed.data.email)) {
-    return { message: 'Invalid credentials.' };
+    return {
+      message: `Email not allowed (set ADMIN_ALLOWED_EMAILS env var to include "${parsed.data.email}")`,
+    };
   }
 
   const supabase = createSupabaseServer();
@@ -36,10 +41,12 @@ export async function signIn(form: FormData): Promise<{ message: string }> {
     password: parsed.data.password,
   });
   if (error) {
-    const detail = process.env.NODE_ENV === 'development' ? ` (${error.message})` : '';
-    return { message: `Sign-in failed${detail}` };
+    // Surface the real reason — easier to debug. Common values:
+    //   "Invalid login credentials" → wrong password OR user doesn't exist
+    //   "Email not confirmed"       → user needs Auto-Confirm in Supabase
+    //   "Email logins are disabled" → enable email provider in Supabase
+    return { message: `Sign-in failed: ${error.message}` };
   }
-  // After login, land on the home overview — operator picks where to go.
   redirect('/');
 }
 

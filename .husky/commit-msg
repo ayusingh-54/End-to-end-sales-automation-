@@ -1,0 +1,19 @@
+# Try common pnpm install paths so Windows Git Bash (which doesn't inherit
+# the user PATH) can still find it.
+for d in \
+  "$HOME/.npm-global" \
+  "$HOME/.npm-global/bin" \
+  "$APPDATA/npm" \
+  "$LOCALAPPDATA/npm" \
+  "/c/Program Files/nodejs" \
+  ; do
+  [ -d "$d" ] && case ":$PATH:" in *":$d:"*) ;; *) PATH="$d:$PATH" ;; esac
+done
+export PATH
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "commit-msg: pnpm not found on PATH — skipping commitlint" >&2
+  exit 0
+fi
+
+pnpm exec commitlint --edit "$1"

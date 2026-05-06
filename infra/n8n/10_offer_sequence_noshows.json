@@ -1,0 +1,61 @@
+{
+  "name": "10 offer sequence (no-shows)",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "hours", "hoursInterval": 6 }] } },
+      "id": "trigger",
+      "name": "Every 6h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { createHmac } = require('crypto');\nconst body = JSON.stringify({ campaign_id: $json.campaign_id, step: 'noshow' });\nconst ts = Math.floor(Date.now()/1000).toString();\nconst sig = createHmac('sha256', $env.N8N_WEBHOOK_SECRET).update(`${ts}.${body}`).digest('hex');\nreturn [{ json: { body, ts, sig } }];"
+      },
+      "id": "sign",
+      "name": "Sign noshow",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.ADMIN_BASE_URL}}/api/jobs/offer-sequence",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-lwl-ts", "value": "={{$json.ts}}" },
+            { "name": "x-lwl-sig", "value": "={{$json.sig}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.body}}"
+      },
+      "id": "call",
+      "name": "POST /jobs/offer-sequence",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "content": "## 10 — Offer sequence (no-shows)\n\nParallel to workflow 09 but for registered-but-not-attended leads. Single send (`noshow` template) with re-watch link + same offer."
+      },
+      "id": "note",
+      "name": "What this does",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [220, 100],
+      "typeOptions": { "width": 600, "height": 140 }
+    }
+  ],
+  "connections": {
+    "Every 6h": { "main": [[{ "node": "Sign noshow", "type": "main", "index": 0 }]] },
+    "Sign noshow": { "main": [[{ "node": "POST /jobs/offer-sequence", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

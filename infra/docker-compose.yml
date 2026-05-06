@@ -1,0 +1,63 @@
+name: lwl-pipeline-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lwl-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lwl
+      POSTGRES_PASSWORD: lwl_dev_only
+      POSTGRES_DB: lwl
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U lwl -d lwl']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: lwl-n8n
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: lwl
+      DB_POSTGRESDB_USER: lwl
+      DB_POSTGRESDB_PASSWORD: lwl_dev_only
+      DB_POSTGRESDB_SCHEMA: n8n
+      N8N_BASIC_AUTH_ACTIVE: 'true'
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-changeme_dev_only}
+      N8N_HOST: localhost
+      N8N_PORT: 5678
+      N8N_PROTOCOL: http
+      WEBHOOK_URL: http://localhost:5678/
+      GENERIC_TIMEZONE: UTC
+      N8N_DIAGNOSTICS_ENABLED: 'false'
+      N8N_VERSION_NOTIFICATIONS_ENABLED: 'false'
+    ports:
+      - '5678:5678'
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n:/workflows:ro
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: lwl-mailhog
+    restart: unless-stopped
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+
+volumes:
+  postgres_data:
+  n8n_data:

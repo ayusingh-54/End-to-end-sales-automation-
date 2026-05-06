@@ -1,0 +1,61 @@
+{
+  "name": "12 re-engagement (T+14d)",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "cronExpression", "expression": "0 9 * * *" }] } },
+      "id": "trigger",
+      "name": "Daily 09:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { createHmac } = require('crypto');\nconst body = '{}';\nconst ts = Math.floor(Date.now()/1000).toString();\nconst sig = createHmac('sha256', $env.N8N_WEBHOOK_SECRET).update(`${ts}.${body}`).digest('hex');\nreturn [{ json: { body, ts, sig } }];"
+      },
+      "id": "sign",
+      "name": "Sign",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.ADMIN_BASE_URL}}/api/jobs/reengage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-lwl-ts", "value": "={{$json.ts}}" },
+            { "name": "x-lwl-sig", "value": "={{$json.sig}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.body}}"
+      },
+      "id": "call",
+      "name": "POST /jobs/reengage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "content": "## 12 — Re-engagement\n\nDaily cron. Picks `offers` whose `expires_at` is between 14 and 30 days ago for leads still in `offered` or `lost`. Sends one fresh-angle email + next masterclass link. Idempotency-keyed per (offer, lead) so leads receive at most one re-engage."
+      },
+      "id": "note",
+      "name": "What this does",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [220, 100],
+      "typeOptions": { "width": 600, "height": 180 }
+    }
+  ],
+  "connections": {
+    "Daily 09:00 UTC": { "main": [[{ "node": "Sign", "type": "main", "index": 0 }]] },
+    "Sign": { "main": [[{ "node": "POST /jobs/reengage", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

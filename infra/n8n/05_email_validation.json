@@ -1,0 +1,37 @@
+{
+  "name": "05 email validation",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "hours", "hoursInterval": 6 }] } },
+      "id": "trigger",
+      "name": "Every 6h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": { "command": "node /app/apps/scraper/dist/index.js validate" },
+      "id": "run",
+      "name": "Run scraper: validate",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "content": "## 05 — Email validation\n\nZeroBounce per lead with `email_verified=false` AND `role_verified=true`. Hard bounces / spamtraps mark the lead `lost` + `bounced=true`. Catch-all and valid mark `email_verified=true`.\n\n**Credential:** ZEROBOUNCE_API_KEY (env).\n\n**Cost guardrail:** validates only role-verified leads to avoid wasting credits."
+      },
+      "id": "note",
+      "name": "What this does",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [200, 100],
+      "typeOptions": { "width": 520, "height": 240 }
+    }
+  ],
+  "connections": {
+    "Every 6h": { "main": [[{ "node": "Run scraper: validate", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

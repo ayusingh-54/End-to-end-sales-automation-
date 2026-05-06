@@ -1,0 +1,74 @@
+{
+  "name": "06 send invites",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "start_campaign",
+        "responseMode": "responseNode"
+      },
+      "id": "wh",
+      "name": "Webhook: /start_campaign",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { createHmac } = require('crypto');\nconst secret = $env.N8N_WEBHOOK_SECRET;\nconst rawBody = JSON.stringify($json);\nconst ts = $headers['x-lwl-ts'];\nconst sig = $headers['x-lwl-sig'];\nif (!ts || !sig) { throw new Error('unauthorized'); }\nconst skew = Math.abs(Math.floor(Date.now()/1000) - Number(ts));\nif (skew > 300) { throw new Error('stale'); }\nconst expected = createHmac('sha256', secret).update(`${ts}.${rawBody}`).digest('hex');\nif (expected !== sig) { throw new Error('bad_signature'); }\nreturn $input.all();"
+      },
+      "id": "verify",
+      "name": "Verify HMAC",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.ADMIN_BASE_URL}}/api/jobs/send-invites",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-lwl-ts", "value": "={{$headers['x-lwl-ts']}}" },
+            { "name": "x-lwl-sig", "value": "={{$headers['x-lwl-sig']}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json)}}"
+      },
+      "id": "call",
+      "name": "POST admin /jobs/send-invites",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": { "respondWith": "allIncomingItems" },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "content": "## 06 — Send invites\n\nTriggered by the admin panel when an operator clicks **Start campaign**.\n\n1. Verifies HMAC over `(timestamp, body)` against `N8N_WEBHOOK_SECRET`.\n2. Forwards the campaign-id to the admin's `/api/jobs/send-invites` route, which renders the invite template per lead and pushes to Instantly with idempotency keys.\n\n**Replay window:** 5 min (skew check). **Daily cap:** enforced by `campaigns.daily_send_cap` in the admin route."
+      },
+      "id": "note",
+      "name": "What this does",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [180, 80],
+      "typeOptions": { "width": 720, "height": 200 }
+    }
+  ],
+  "connections": {
+    "Webhook: /start_campaign": { "main": [[{ "node": "Verify HMAC", "type": "main", "index": 0 }]] },
+    "Verify HMAC": { "main": [[{ "node": "POST admin /jobs/send-invites", "type": "main", "index": 0 }]] },
+    "POST admin /jobs/send-invites": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

@@ -1,0 +1,72 @@
+{
+  "name": "09 offer sequence (attendees)",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "minutes", "minutesInterval": 15 }] } },
+      "id": "trigger",
+      "name": "Every 15 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Decide which step is due based on time-since-masterclass-end per campaign.\nconst now = Date.now();\nconst out = [];\nfor (const c of $json.campaigns ?? []) {\n  const endMs = new Date(c.masterclass_ended_at).getTime();\n  const dt = (now - endMs) / 3_600_000;\n  let step;\n  if (dt >= 0 && dt < 6) step = 'offer_d0';\n  else if (dt >= 24 && dt < 30) step = 'offer_d1';\n  else if (dt >= 48 && dt < 54) step = 'offer_d2_morning';\n  else if (dt >= 68 && dt < 72) step = 'offer_d2_final';\n  if (step) out.push({ json: { campaign_id: c.id, step }});\n}\nreturn out;"
+      },
+      "id": "decide",
+      "name": "Decide step",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { createHmac } = require('crypto');\nconst body = JSON.stringify($json);\nconst ts = Math.floor(Date.now()/1000).toString();\nconst sig = createHmac('sha256', $env.N8N_WEBHOOK_SECRET).update(`${ts}.${body}`).digest('hex');\nreturn [{ json: { body, ts, sig } }];"
+      },
+      "id": "sign",
+      "name": "Sign",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.ADMIN_BASE_URL}}/api/jobs/offer-sequence",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-lwl-ts", "value": "={{$json.ts}}" },
+            { "name": "x-lwl-sig", "value": "={{$json.sig}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.body}}"
+      },
+      "id": "call",
+      "name": "POST /jobs/offer-sequence",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "content": "## 09 — Offer sequence (attendees)\n\nFour-step sequence over 72h: D0 → D1 → D2 morning → D2 final 4h. Each step posts to the admin's `/jobs/offer-sequence` route which creates the Stripe Checkout session and sends via Instantly.\n\nSiblings: workflow 10 handles no-shows."
+      },
+      "id": "note",
+      "name": "What this does",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [220, 100],
+      "typeOptions": { "width": 720, "height": 180 }
+    }
+  ],
+  "connections": {
+    "Every 15 min": { "main": [[{ "node": "Decide step", "type": "main", "index": 0 }]] },
+    "Decide step": { "main": [[{ "node": "Sign", "type": "main", "index": 0 }]] },
+    "Sign": { "main": [[{ "node": "POST /jobs/offer-sequence", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

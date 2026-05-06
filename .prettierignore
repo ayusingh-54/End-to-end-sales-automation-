@@ -1,0 +1,12 @@
+node_modules
+dist
+build
+.next
+coverage
+pnpm-lock.yaml
+**/*.gen.ts
+infra/n8n/*.json
+
+# Spec inputs — never reformatted
+CLAUDE_CODE_MASTER_PROMPT_LWL_FDF.md
+AI_Sales_Automation_Pilot_FDF_Assignment.docx

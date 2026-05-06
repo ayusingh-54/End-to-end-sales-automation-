@@ -1,0 +1,10 @@
+title = "LWL gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allow placeholder env values"
+paths = [
+  '''\.env\.example$''',
+]

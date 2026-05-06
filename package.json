@@ -1,0 +1,41 @@
+{
+  "name": "lwl-pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Learn with Leaders — Future Doctors Fellowship AI sales automation pipeline",
+  "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "lint": "pnpm -r --parallel run lint",
+    "typecheck": "pnpm -r --parallel run typecheck",
+    "build": "pnpm -r run build",
+    "test": "pnpm -r --parallel run test",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,yml,yaml}\"",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.6.0",
+    "@commitlint/config-conventional": "^19.6.0",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.11",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  }
+}

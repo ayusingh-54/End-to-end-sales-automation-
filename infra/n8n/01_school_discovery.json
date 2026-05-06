@@ -1,0 +1,50 @@
+{
+  "name": "01 school discovery",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * 1"
+            }
+          ]
+        }
+      },
+      "id": "trigger",
+      "name": "Weekly Mon 06:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "command": "node /app/apps/scraper/dist/index.js discover"
+      },
+      "id": "run",
+      "name": "Run scraper: discover",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "content": "## 01 — School discovery\n\nScrapes seed sources (NAIS, BSR, TABS) into `schools_raw`. Read-only with respect to existing rows; tier verification (workflow 02) promotes them.\n\n**Schedule:** weekly, Monday 06:00 UTC.\n\n**Reads:** none. **Writes:** `schools_raw`."
+      },
+      "id": "note",
+      "name": "What this does",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [200, 100],
+      "typeOptions": { "width": 480, "height": 220 }
+    }
+  ],
+  "connections": {
+    "Weekly Mon 06:00 UTC": {
+      "main": [[{ "node": "Run scraper: discover", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

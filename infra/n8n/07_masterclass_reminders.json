@@ -1,0 +1,61 @@
+{
+  "name": "07 masterclass reminders",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "minutes", "minutesInterval": 30 }] } },
+      "id": "trigger",
+      "name": "Every 30 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { createHmac } = require('crypto');\nconst secret = $env.N8N_WEBHOOK_SECRET;\nconst kinds = ['reminder_24h','reminder_1h'];\nreturn kinds.map(kind => {\n  const body = JSON.stringify({ kind });\n  const ts = Math.floor(Date.now()/1000).toString();\n  const sig = createHmac('sha256', secret).update(`${ts}.${body}`).digest('hex');\n  return { json: { body, ts, sig } };\n});"
+      },
+      "id": "sign",
+      "name": "Sign payloads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.ADMIN_BASE_URL}}/api/jobs/reminders",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-lwl-ts", "value": "={{$json.ts}}" },
+            { "name": "x-lwl-sig", "value": "={{$json.sig}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.body}}"
+      },
+      "id": "call",
+      "name": "POST /jobs/reminders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "content": "## 07 — Masterclass reminders\n\nFires every 30 min. Sends `reminder_24h` and `reminder_1h` for any registration whose masterclass falls inside the matching window. Idempotency-keyed per (kind, lead, masterclass) so re-runs are safe."
+      },
+      "id": "note",
+      "name": "What this does",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [220, 100],
+      "typeOptions": { "width": 600, "height": 160 }
+    }
+  ],
+  "connections": {
+    "Every 30 min": { "main": [[{ "node": "Sign payloads", "type": "main", "index": 0 }]] },
+    "Sign payloads": { "main": [[{ "node": "POST /jobs/reminders", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd ../.. && pnpm install --frozen-lockfile=false && pnpm -F @lwl/db build && pnpm -F @lwl/shared build && pnpm -F @lwl/admin build",
+  "installCommand": "echo 'Skipping — install runs inside buildCommand'",
+  "outputDirectory": ".next",
+  "framework": "nextjs"
+}

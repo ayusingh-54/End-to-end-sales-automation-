@@ -1,0 +1,61 @@
+{
+  "name": "11 stripe webhook (reconciliation only)",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "hours", "hoursInterval": 6 }] } },
+      "id": "trigger",
+      "name": "Every 6h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { createHmac } = require('crypto');\nconst body = '{}';\nconst ts = Math.floor(Date.now()/1000).toString();\nconst sig = createHmac('sha256', $env.N8N_WEBHOOK_SECRET).update(`${ts}.${body}`).digest('hex');\nreturn [{ json: { body, ts, sig } }];"
+      },
+      "id": "sign",
+      "name": "Sign",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.ADMIN_BASE_URL}}/api/jobs/stripe-reconcile",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-lwl-ts", "value": "={{$json.ts}}" },
+            { "name": "x-lwl-sig", "value": "={{$json.sig}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.body}}"
+      },
+      "id": "call",
+      "name": "POST /jobs/stripe-reconcile",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "content": "## 11 — Stripe reconciliation\n\nThe primary Stripe webhook (`checkout.session.completed`) is handled by the admin's `/api/webhooks/stripe` route, which has signature verification and side-effects (payment row, lead status, receipt email, resource delivery).\n\nThis n8n workflow runs every 6 h as a safety net: it lists Stripe sessions paid in the last 7 days and inserts a `pipeline_events` ERROR row for any that didn't make it into `payments`."
+      },
+      "id": "note",
+      "name": "What this does",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [220, 100],
+      "typeOptions": { "width": 720, "height": 200 }
+    }
+  ],
+  "connections": {
+    "Every 6h": { "main": [[{ "node": "Sign", "type": "main", "index": 0 }]] },
+    "Sign": { "main": [[{ "node": "POST /jobs/stripe-reconcile", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

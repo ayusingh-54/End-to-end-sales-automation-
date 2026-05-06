@@ -1,0 +1,54 @@
+{
+  "name": "13 bounce / reply forwarder",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "esp_event", "responseMode": "lastNode" },
+      "id": "wh",
+      "name": "Webhook: /esp_event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalise Instantly + Resend events to a common shape, then forward.\nconst e = $json;\nconst kind = e.type || (e.event && e.event.type);\nlet event;\nif (kind?.startsWith('email.bounced')) event = { type: 'email.bounced', message_id: e.message_id || e.data?.email_id, email: e.email || e.data?.to?.[0] };\nelse if (kind?.startsWith('email.replied')) event = { type: 'email.replied', message_id: e.message_id || e.data?.email_id, email: e.email || e.data?.from };\nelse if (kind?.startsWith('email.opened')) event = { type: 'email.opened', message_id: e.message_id || e.data?.email_id };\nelse if (kind?.startsWith('email.clicked')) event = { type: 'email.clicked', message_id: e.message_id || e.data?.email_id };\nelse return [];\nreturn [{ json: event }];"
+      },
+      "id": "norm",
+      "name": "Normalise",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.ADMIN_BASE_URL}}/api/webhooks/instantly",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{JSON.stringify($json)}}"
+      },
+      "id": "fwd",
+      "name": "Forward to admin webhook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "content": "## 13 — Bounce / reply forwarder\n\nWebhook entrypoint that ESPs (Instantly, Resend) post to. Normalises payloads to a shared shape and forwards to the admin app's webhook routes (which are the source of truth for `email_sends.bounced/replied/opens/clicks` and downstream `leads.status` flips).\n\nKept in n8n so retries / DLQ are visible in the n8n UI rather than being silent in the admin app."
+      },
+      "id": "note",
+      "name": "What this does",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [220, 100],
+      "typeOptions": { "width": 720, "height": 220 }
+    }
+  ],
+  "connections": {
+    "Webhook: /esp_event": { "main": [[{ "node": "Normalise", "type": "main", "index": 0 }]] },
+    "Normalise": { "main": [[{ "node": "Forward to admin webhook", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

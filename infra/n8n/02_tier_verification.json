@@ -1,0 +1,37 @@
+{
+  "name": "02 tier verification",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "hours", "hoursInterval": 6 }] } },
+      "id": "trigger",
+      "name": "Every 6h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": { "command": "node /app/apps/scraper/dist/index.js tier" },
+      "id": "run",
+      "name": "Run scraper: tier",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "content": "## 02 — Tier verification\n\nScores rows in `schools_raw` against `school_tier_rules` for the FDF program. Promotes to `schools` with `tier_verified=true` if `score >= threshold` AND `tuition >= min_tuition`.\n\n**Reads:** `schools_raw`, `school_tier_rules`. **Writes:** `schools`."
+      },
+      "id": "note",
+      "name": "What this does",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [200, 100],
+      "typeOptions": { "width": 480, "height": 200 }
+    }
+  ],
+  "connections": {
+    "Every 6h": { "main": [[{ "node": "Run scraper: tier", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

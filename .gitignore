@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Environment & secrets — NEVER commit
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+*.pem
+*.key
+secrets/
+.vault/
+
+# IDE / OS
+.vscode/
+!.vscode/settings.recommended.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+logs/
+
+# Test / coverage
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+e2e-results/
+
+# Cache
+.cache/
+.turbo/
+.eslintcache
+.parcel-cache/
+
+# Generated DB types (regenerated from Supabase)
+packages/db/types.gen.ts
+
+# Local Supabase
+supabase/.branches
+supabase/.temp
+supabase/seed.local.sql
+
+# Local Docker volumes
+infra/.data/

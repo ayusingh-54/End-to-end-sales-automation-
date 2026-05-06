@@ -1,0 +1,61 @@
+{
+  "name": "08 attendance sync",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "minutes", "minutesInterval": 15 }] } },
+      "id": "trigger",
+      "name": "Every 15 min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { createHmac } = require('crypto');\nconst secret = $env.N8N_WEBHOOK_SECRET;\nconst body = '{}';\nconst ts = Math.floor(Date.now()/1000).toString();\nconst sig = createHmac('sha256', secret).update(`${ts}.${body}`).digest('hex');\nreturn [{ json: { body, ts, sig } }];"
+      },
+      "id": "sign",
+      "name": "Sign",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.ADMIN_BASE_URL}}/api/jobs/attendance-sync",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-lwl-ts", "value": "={{$json.ts}}" },
+            { "name": "x-lwl-sig", "value": "={{$json.sig}}" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.body}}"
+      },
+      "id": "call",
+      "name": "POST /jobs/attendance-sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "content": "## 08 — Attendance sync\n\nPolls Zoom REST for each completed masterclass and updates `registrations.attended` + `attendance_minutes`. >=10 min counts as attended.\n\n**Credentials:** ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET (env)."
+      },
+      "id": "note",
+      "name": "What this does",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [220, 100],
+      "typeOptions": { "width": 600, "height": 180 }
+    }
+  ],
+  "connections": {
+    "Every 15 min": { "main": [[{ "node": "Sign", "type": "main", "index": 0 }]] },
+    "Sign": { "main": [[{ "node": "POST /jobs/attendance-sync", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "@lwl/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas/index.d.ts",
+      "default": "./dist/schemas/index.js"
+    }
+  },
+  "scripts": {
+    "lint": "eslint \"src/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test --import tsx \"test/**/*.test.ts\""
+  },
+  "dependencies": {
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

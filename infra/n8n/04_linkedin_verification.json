@@ -1,0 +1,37 @@
+{
+  "name": "04 linkedin verification",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "hours", "hoursInterval": 6 }] } },
+      "id": "trigger",
+      "name": "Every 6h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": { "command": "node /app/apps/scraper/dist/index.js linkedin" },
+      "id": "run",
+      "name": "Run scraper: linkedin",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "content": "## 04 — LinkedIn verification\n\nCalls LWL's existing LinkedIn agent (or deterministic mock if not configured) for each lead with `role_verified = false` and a `linkedin_url`. Sets `role_verified = true` and `status = 'verified'` when role + employer match with confidence >= 0.6.\n\n**Credential:** LINKEDIN_AGENT_URL + LINKEDIN_AGENT_API_KEY (env).\n\n**Writes:** `leads.role_verified`, `leads.status`."
+      },
+      "id": "note",
+      "name": "What this does",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [200, 100],
+      "typeOptions": { "width": 520, "height": 240 }
+    }
+  ],
+  "connections": {
+    "Every 6h": { "main": [[{ "node": "Run scraper: linkedin", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

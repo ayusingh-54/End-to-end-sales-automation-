@@ -1,0 +1,37 @@
+{
+  "name": "03 contact enrichment",
+  "nodes": [
+    {
+      "parameters": { "rule": { "interval": [{ "field": "hours", "hoursInterval": 12 }] } },
+      "id": "trigger",
+      "name": "Every 12h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": { "command": "node /app/apps/scraper/dist/index.js enrich" },
+      "id": "run",
+      "name": "Run scraper: enrich",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "content": "## 03 — Contact enrichment\n\nFor each `tier_verified` school, queries Apollo for people matching the FDF target_roles. Falls back to direct page scrape if Apollo returns nothing. Upserts into `leads` keyed on `idempotency_key = sha256(program|school|email)`.\n\n**Apollo credential:** referenced via env (APOLLO_API_KEY) — never inline.\n\n**Writes:** `leads`."
+      },
+      "id": "note",
+      "name": "What this does",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [200, 100],
+      "typeOptions": { "width": 520, "height": 220 }
+    }
+  ],
+  "connections": {
+    "Every 12h": { "main": [[{ "node": "Run scraper: enrich", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

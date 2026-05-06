@@ -34,6 +34,9 @@ npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 logs/
+# …but keep the admin app's /logs route (Next.js page, not runtime log output)
+!apps/admin/app/**/logs/
+!apps/admin/app/**/logs/**
 
 # Test / coverage
 coverage/
